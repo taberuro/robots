@@ -2,11 +2,15 @@
 #include <ServoSmooth.h>
 #include <GyverMotor.h>
 
-ServoInputPin<14> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) 
-const float Deadzone_ch2 = 0.10;  //мёртвая зона 2 канала - 10% 
-ServoInputPin<15> ch1(1020, 1980); //1 канал 
-const float Deadzone_ch1 = 0.10;  //10%
 
+// мотор левый задний 2\3
+// каналы
+
+
+ServoInputPin<2> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) / Channel 2 - <Pin> Name (range)
+const float Deadzone_ch2 = 0.10;  //мёртвая зона 2 канала - 10%  
+ServoInputPin<3> ch1(1020, 1980); //1 канал / Channel 1
+const float Deadzone_ch1 = 0.10;  //мёртвая зона 1 канала - 10%
 
 //блок пинов подключения серв
 
@@ -29,7 +33,7 @@ const int SERVO_RR = 25; // задний правый серв
 // левая сторона
 GMotor motor_LF(DRIVER2WIRE, 7,6); //Мотор левый передний (тип драйвера, IN1, IN2) 
 GMotor motor_LM(DRIVER2WIRE, 11,10); //Мотор левый средний 
-GMotor motor_LR(DRIVER2WIRE, 2,3); //Мотор левый задний 
+GMotor motor_LR(DRIVER2WIRE, 14,15); //Мотор левый задний 
 // правая сторона
 GMotor motor_RF(DRIVER2WIRE, 4,5); //Мотор правый передний 
 GMotor motor_RM(DRIVER2WIRE, 8,9); //Мотор правый средний 
@@ -93,8 +97,8 @@ servo_RR.setAutoDetach(false); // Автоотключение сервопри�
 
 void loop() {
   
- int val_ch1 = ch1.mapDeadzone(-255, 255, Deadzone_ch1); // карта обработки ( диапазон -255 -- 255 ) с учётом мёртвой зоны ( -255_-25.5 -- 25.5_255 )
- int val_ch2 = ch2.mapDeadzone(-255, 255, Deadzone_ch2); // карта обработки ( диапазон -255 -- 255 ) с учётом мёртвой зоны ( -255_-25.5 -- 25.5_255 )
+ int val_ch1 = ch1.mapDeadzone(-254, 254, Deadzone_ch1); // карта обработки ( диапазон -254 -- 254 ) с учётом мёртвой зоны ( -254_-25.4 -- 25.4_254 )
+ int val_ch2 = ch2.mapDeadzone(-254, 254, Deadzone_ch2); // карта обработки ( диапазон -254 -- 254 ) с учётом мёртвой зоны ( -254_-25.4 -- 25.4_254 )
 
 
   // Движение вперёд и назад 
@@ -129,8 +133,8 @@ void loop() {
     Serial.print(val_ch2);            // первый график - установленная скорость
     Serial.print(',');
     Serial.println(motor_LF._duty);  // второй график - реальный сигнал на мотор 
-
-    delay(50);  
+    // задержка
+    delay(500);  
   }  
 
   // Разворот на месте
@@ -162,8 +166,8 @@ void loop() {
     Serial.print(val_ch1);            
     Serial.print(',');
     Serial.println(motor_RF._duty);  
-   
-    delay(50);  
+    // задержка
+    delay(500);  
   }
 
 
@@ -193,7 +197,7 @@ void loop() {
     boolean state12 = servo_RR.tick();
     if (millis() - servo_ch1_Timer >= 40) {
     servo_ch1_Timer = millis();
-    int newPos = map(val_ch1, -255, 255, 1200, 1800); //(550, 2500) 
+    int newPos = map(val_ch1, -254, 254, 1200, 1800); //(550, 2500) 
     servo_LF.setTarget(newPos);
     servo_LR.setTarget(newPos);
     servo_RF.setTarget(newPos);
@@ -203,8 +207,8 @@ void loop() {
     Serial.print(val_ch2);            
     Serial.print(',');
     Serial.println(motor_LM._duty);  
-    
-    delay(50);  
+    // задержка
+    delay(500);  
   }  
 
   
@@ -236,8 +240,8 @@ void loop() {
     Serial.print(val_ch2);            
     Serial.print(',');
     Serial.println(motor_RM._duty);  
-   
-    delay(50);  
+    // задержка
+    delay(500);  
   }  
 
   
