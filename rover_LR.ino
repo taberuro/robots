@@ -2,11 +2,6 @@
 #include <ServoSmooth.h>
 #include <GyverMotor.h>
 
-
-// мотор левый задний 2\3
-// каналы
-
-
 ServoInputPin<2> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) / Channel 2 - <Pin> Name (range)
 const float Deadzone_ch2 = 0.10;  //мёртвая зона 2 канала - 10%  
 ServoInputPin<3> ch1(1020, 1980); //1 канал / Channel 1
