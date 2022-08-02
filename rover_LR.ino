@@ -2,9 +2,9 @@
 #include <ServoSmooth.h>
 #include <GyverMotor.h>
 
-ServoInputPin<2> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) 
+ServoInputPin<14> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) 
 const float Deadzone_ch2 = 0.10;  //мёртвая зона 2 канала - 10% 
-ServoInputPin<3> ch1(1020, 1980); //1 канал 
+ServoInputPin<15> ch1(1020, 1980); //1 канал 
 const float Deadzone_ch1 = 0.10;  //10%
 
 
@@ -125,11 +125,11 @@ void loop() {
     servo_LR.setTargetDeg(86);
     servo_RF.setTargetDeg(96); 
     servo_RR.setTargetDeg(91); 
-    
+
     Serial.print(val_ch2);            // первый график - установленная скорость
     Serial.print(',');
     Serial.println(motor_LF._duty);  // второй график - реальный сигнал на мотор 
-  
+
     delay(50);  
   }  
 
@@ -158,11 +158,11 @@ void loop() {
     servo_LR.setTargetDeg(131);
     servo_RF.setTargetDeg(51);
     servo_RR.setTargetDeg(46);
-        
+  
     Serial.print(val_ch1);            
     Serial.print(',');
     Serial.println(motor_RF._duty);  
-  
+   
     delay(50);  
   }
 
@@ -199,11 +199,11 @@ void loop() {
     servo_RF.setTarget(newPos);
     servo_RR.setTarget(newPos); 
     }
-   
+
     Serial.print(val_ch2);            
     Serial.print(',');
     Serial.println(motor_LM._duty);  
-  
+    
     delay(50);  
   }  
 
@@ -232,11 +232,11 @@ void loop() {
     servo_LR.setTargetDeg(86);
     servo_RF.setTargetDeg(96); 
     servo_RR.setTargetDeg(91); 
-  
+
     Serial.print(val_ch2);            
     Serial.print(',');
     Serial.println(motor_RM._duty);  
-  
+   
     delay(50);  
   }  
 
