@@ -1,6 +1,68 @@
+/*
+библиотеки:     ServoSmooth - https://github.com/GyverLibs/ServoSmooth
+ *              GyverMotor - https://github.com/GyverLibs/GyverMotor
+ *              ServoInput - https://github.com/dmadison/ServoInput/releases/tag/v1.0.2
+ *              NeoPixel -  https://github.com/adafruit/Adafruit_NeoPixel/tree/master/examples
+ */
+
 #include <ServoInput.h>
 #include <ServoSmooth.h>
 #include <GyverMotor.h>
+#include <NeoPixelBus.h>
+#include <NeoPixelAnimator.h>
+
+
+
+// светодиоды 
+const uint16_t PixelCount = 12; // кол-во светодиодов
+const uint8_t PixelPin = 15;  // пин на котором управление
+NeoPixelBus<NeoGrbFeature, Neo800KbpsMethod> strip(PixelCount, PixelPin);
+NeoPixelAnimator animations(PixelCount); // NeoPixel animation management object
+struct MyAnimationState
+{
+    RgbColor StartingColor;
+    RgbColor EndingColor;
+};
+MyAnimationState animationState[PixelCount];
+void SetRandomSeed()
+{
+    uint32_t seed;
+    seed = analogRead(0);
+    delay(1);
+    for (int shifts = 3; shifts < 31; shifts += 3)
+    {
+        seed ^= analogRead(0) << shifts;
+        delay(1);
+    }
+    randomSeed(seed);
+}
+
+void BlendAnimUpdate(const AnimationParam& param)
+{
+    RgbColor updatedColor = RgbColor::LinearBlend(
+        animationState[param.index].StartingColor,
+        animationState[param.index].EndingColor,
+        param.progress);
+    strip.SetPixelColor(param.index, updatedColor);
+}
+
+void PickRandom(float luminance)
+{
+    uint16_t count = random(PixelCount);
+    while (count > 0)
+    {
+        uint16_t pixel = random(PixelCount);
+        uint16_t time = random(100, 400);
+        animationState[pixel].StartingColor = strip.GetPixelColor(pixel);
+        animationState[pixel].EndingColor = HslColor(random(360) / 360.0f, 1.0f, luminance);
+        animations.StartAnimation(pixel, time, BlendAnimUpdate);
+        count--;
+    }
+}
+
+// конец войдов для светодиодов
+
+
 
 ServoInputPin<2> ch2(1020, 1980); //2 канал - <Пин> Название(диапазон) / Channel 2 - <Pin> Name (range)
 const float Deadzone_ch2 = 0.10;  //мёртвая зона 2 канала - 10%  
@@ -47,6 +109,13 @@ int val_ch2;
 
 void setup() {
 
+// светодиоды
+strip.Begin();
+strip.Show();
+SetRandomSeed();
+// конец светодиодов
+
+
 Serial.begin(9600);  
 
 //блок направления вращения двигателя (FORWARD/BACKWARD/STOP/AUTO) 
@@ -92,6 +161,19 @@ servo_RR.setAutoDetach(false); // Автоотключение сервопри�
 
 void loop() {
   
+
+// светодиоды 
+ if (animations.IsAnimating())
+    {
+        animations.UpdateAnimations();
+        strip.Show();
+    }
+else
+    {
+        PickRandom(0.2f);
+    }
+// конец светодиодов
+
  int val_ch1 = ch1.mapDeadzone(-254, 254, Deadzone_ch1); // карта обработки ( диапазон -254 -- 254 ) с учётом мёртвой зоны ( -254_-25.4 -- 25.4_254 )
  int val_ch2 = ch2.mapDeadzone(-254, 254, Deadzone_ch2); // карта обработки ( диапазон -254 -- 254 ) с учётом мёртвой зоны ( -254_-25.4 -- 25.4_254 )
 
