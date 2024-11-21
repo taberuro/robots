@@ -1,0 +1,181 @@
+using System;
+using System.Windows.Forms;
+using OpenCvSharp;
+using OpenCvSharp.Aruco;
+using Point = OpenCvSharp.Point;
+
+namespace IP
+{
+    public partial class Form1 : Form
+    {
+        // Конструктор формы
+        public Form1()
+        {
+            InitializeComponent(); // Инициализация компонентов формы
+        }
+
+        // Инициализация компонентов
+        private void InitializeComponent()
+        {
+            this.button1 = new System.Windows.Forms.Button();
+            this.button1.Text = "Start Detection";
+            this.button1.Click += new EventHandler(this.Button1_Click);
+            this.Controls.Add(this.button1);
+            this.Text = "Aruco Marker Detection";
+            this.ClientSize = new System.Drawing.Size(800, 600);
+        }
+
+        private Button button1;
+
+        // Обработчик события нажатия кнопки
+        private void Button1_Click(object sender, EventArgs e)
+        {
+            string videoFilePath = "1.mkv"; // Путь к видеофайлу
+
+            using (var capture = new VideoCapture(videoFilePath))
+            {
+                if (!capture.IsOpened())
+                {
+                    Console.WriteLine("Не удалось открыть видеофайл");
+                    return;
+                }
+
+                Mat frame = new Mat();
+                Mat resizedFrame = new Mat();
+                var dictionary = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.Dict4X4_50);
+                var parameters = new DetectorParameters();
+                OpenCvSharp.Size newSize = new OpenCvSharp.Size(640, 480);
+
+                // Калибровочные параметры камеры
+                double[,] cameraMatrixData = new double[,]
+                {
+                    { 1000, 0, 320 },
+                    { 0, 1000, 240 },
+                    { 0, 0, 1 }
+                };
+                Mat cameraMatrix = new Mat(3, 3, MatType.CV_64F, cameraMatrixData);
+
+                double[] distCoeffsData = new double[] { 0, 0, 0, 0 };
+                Mat distCoeffs = new Mat(1, 4, MatType.CV_64F, distCoeffsData);
+
+                while (true)
+                {
+                    capture.Read(frame);
+                    if (frame.Empty())
+                        break;
+
+                    // Изменение размера кадра для отображения
+                    Cv2.Resize(frame, resizedFrame, newSize);
+
+                    // Обнаружение ArUco меток
+                    Point2f[][] corners;
+                    int[] ids;
+                    Point2f[][] rejectedCandidates;
+                    CvAruco.DetectMarkers(resizedFrame, dictionary, out corners, out ids, parameters, out rejectedCandidates);
+
+                    if (ids.Length > 0)
+                    {
+                        using (var rvecs = new Mat())
+                        using (var tvecs = new Mat())
+                        {
+                            // Определение позы меток
+                            CvAruco.EstimatePoseSingleMarkers(corners, 0.1f, cameraMatrix, distCoeffs, rvecs, tvecs);
+
+                            // Отрисовка границ обнаруженных меток
+                            CvAruco.DrawDetectedMarkers(resizedFrame, corners, ids);
+
+                            // Преобразование Mat в массивы Vec3d для работы с позицией и ориентацией
+                            Vec3d[] rvecsArray = new Vec3d[rvecs.Rows];
+                            Vec3d[] tvecsArray = new Vec3d[tvecs.Rows];
+
+                            for (int i = 0; i < rvecs.Rows; i++)
+                            {
+                                rvecsArray[i] = rvecs.At<Vec3d>(i);
+                                tvecsArray[i] = tvecs.At<Vec3d>(i);
+                            }
+
+                            // Используем несколько маркеров для расчета рамки
+                            if (ids.Length >= 2)
+                            {
+                                // Позиции переднего и заднего маркеров автомобиля
+                                Vec3d frontTvec = tvecsArray[0];
+                                Vec3d rearTvec = tvecsArray[1];
+
+                                // Определение размеров прямоугольника
+                                double carLength = Math.Abs(frontTvec[2] - rearTvec[2]) + 0.5;
+                                double carWidth = 1.5;
+                                double carHeight = 1.0;
+
+                              // Координаты углов для 3D-прямоугольника, который накроет весь автомобиль, уменьшенные в 2 раза
+                              Point3f[] boxPoints = new Point3f[]
+                              {
+                                  new Point3f((float)-carWidth / 4, (float)-carHeight / 4, 0), // Нижняя передняя левая точка
+                                  new Point3f((float)carWidth / 4, (float)-carHeight / 4, 0),  // Нижняя передняя правая точка
+                                  new Point3f((float)carWidth / 4, (float)carHeight / 4, 0),   // Верхняя передняя правая точка
+                                  new Point3f((float)-carWidth / 4, (float)carHeight / 4, 0),  // Верхняя передняя левая точка
+                              
+                                  new Point3f((float)-carWidth / 4, (float)-carHeight / 4, (float)-carLength / 2), // Нижняя задняя левая точка
+                                  new Point3f((float)carWidth / 4, (float)-carHeight / 4, (float)-carLength / 2),  // Нижняя задняя правая точка
+                                  new Point3f((float)carWidth / 4, (float)carHeight / 4, (float)-carLength / 2),   // Верхняя задняя правая точка
+                                  new Point3f((float)-carWidth / 4, (float)carHeight / 4, (float)-carLength / 2)   // Верхняя задняя левая точка
+                              };
+
+
+                                // Создание Mat из массива boxPoints
+                                Mat boxPointsMat = new Mat(boxPoints.Length, 1, MatType.CV_32FC3, boxPoints);
+
+                                // Проецирование точек 3D рамки на 2D и сохранение в Mat
+                                Mat imagePointsMat = new Mat();
+                                Cv2.ProjectPoints(boxPointsMat, rvecsArray[0], tvecsArray[0], cameraMatrix, distCoeffs, imagePointsMat);
+
+                                // Извлечение 2D точек из Mat и запись в массив Point2f[]
+                                Point2f[] imagePoints = new Point2f[8];
+                                for (int i = 0; i < 8; i++)
+                                {
+                                    var point = imagePointsMat.At<Point2f>(i);
+                                    imagePoints[i] = new Point2f(point.X, point.Y);
+                                }
+
+                                // Отрисовка передней и задней граней и соединяющих линий
+                                DrawBoxEdges(resizedFrame, imagePoints);
+                            }
+
+                            // Отрисовка осей координат для каждой обнаруженной метки
+                            for (int j = 0; j < ids.Length; j++)
+                            {
+                                Cv2.DrawFrameAxes(resizedFrame, cameraMatrix, distCoeffs, rvecsArray[j], tvecsArray[j], 0.1f);
+                            }
+                        }
+                    }
+
+                    // Отображение результата
+                    Cv2.ImShow("Resized Video with Markers", resizedFrame);
+                    if (Cv2.WaitKey(25) >= 0)
+                        break;
+                }
+            }
+        }
+
+        // Вспомогательный метод для отрисовки рамки вокруг автомобиля
+        private void DrawBoxEdges(Mat frame, Point2f[] points)
+        {
+            Scalar color = Scalar.Red;
+            int thickness = 2;
+
+            Cv2.Line(frame, (Point)points[0], (Point)points[1], color, thickness);
+            Cv2.Line(frame, (Point)points[1], (Point)points[2], color, thickness);
+            Cv2.Line(frame, (Point)points[2], (Point)points[3], color, thickness);
+            Cv2.Line(frame, (Point)points[3], (Point)points[0], color, thickness);
+
+            Cv2.Line(frame, (Point)points[4], (Point)points[5], color, thickness);
+            Cv2.Line(frame, (Point)points[5], (Point)points[6], color, thickness);
+            Cv2.Line(frame, (Point)points[6], (Point)points[7], color, thickness);
+            Cv2.Line(frame, (Point)points[7], (Point)points[4], color, thickness);
+
+            Cv2.Line(frame, (Point)points[0], (Point)points[4], color, thickness);
+            Cv2.Line(frame, (Point)points[1], (Point)points[5], color, thickness);
+            Cv2.Line(frame, (Point)points[2], (Point)points[6], color, thickness);
+            Cv2.Line(frame, (Point)points[3], (Point)points[7], color, thickness);
+        }
+    }
+}
